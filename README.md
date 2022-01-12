@@ -1,4 +1,4 @@
-### ORSim: Open Source Distributed Agent Based Simulation Library
+# ORSim: Open Source Distributed Agent Based Simulation Library
 
 ORSim is born out of a development Program called OpenRoad which is a set of libraries, tools and solvers to make research on Geo-Spatial problems Accessible.
 
