@@ -3,9 +3,21 @@ Name: orsim
 Version: 0.1.0
 Summary: Distributed Agent based Simulation Library
 Home-page: UNKNOWN
-Author: iora
+Author: iora_dev_team
 License: MIT
 Platform: UNKNOWN
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Description-Content-Type: text/markdown
 
-UNKNOWN
+# ORSim: Open Source Distributed Agent Based Simulation Library
+
+ORSim is born out of a development Program called OpenRoad which is a set of libraries, tools and solvers to make research on Geo-Spatial problems Accessible.
+
+OR in ORSim can refer to the Originating Project OpenRoad. It also refers to Operations Research and the Supporting Research lab IORA.
+
+
+ORSim aims to be technology and platform Neutral even though the early versions are closely tied to other Open Source tech stacks such as RabbitMQ.
+
 
