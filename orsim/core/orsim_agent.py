@@ -7,9 +7,8 @@ from dateutil.relativedelta import relativedelta
 from orsim.messenger import Messenger
 
 # from apps.config import orsim_settings, settings
-# from orsim.messenger_service.messenger_config import messenger_backend_settings
 from orsim.core.orsim_env import ORSimEnv
-from utils import time_to_str, str_to_time
+from orsim.utils import time_to_str, str_to_time
 
 class ORSimAgent(ABC):
 
@@ -18,7 +17,7 @@ class ORSimAgent(ABC):
     payload_cache = None
     step_log = {}
 
-    def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler_id, behavior, orsim_settings): #, messenger_backend_settings=messenger_backend_settings):
+    def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler_id, behavior, orsim_settings):
         self.unique_id = unique_id
         self.run_id = run_id
         self.scheduler_id = scheduler_id

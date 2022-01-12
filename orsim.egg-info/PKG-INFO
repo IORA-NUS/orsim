@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
 Name: orsim
-Version: 0.1.0
+Version: 0.1.1
 Summary: Distributed Agent based Simulation Library
-Home-page: UNKNOWN
+Home-page: https://pypi.org/project/orsim
 Author: iora_dev_team
 License: MIT
 Platform: UNKNOWN

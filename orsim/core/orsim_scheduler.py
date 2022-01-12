@@ -6,13 +6,12 @@ from datetime import datetime
 from orsim.messenger import Messenger
 
 from random import random
-# from orsim.messenger_service.messenger_config import messenger_backend_settings
 from .orsim_env import ORSimEnv
 
 
 class ORSimScheduler(ABC):
 
-    def __init__(self, run_id, scheduler_id, orsim_settings, init_failure_handler='soft'): #, messenger_backend_settings=messenger_backend_settings):
+    def __init__(self, run_id, scheduler_id, orsim_settings, init_failure_handler='soft'): 
         self.run_id = run_id
         self.scheduler_id = scheduler_id
         self.time = 0
