@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 HERE = pathlib.Path(__file__).parent
 
 # The text of the README file
-README = (HERE / "README.md").read_text()
+README = (HERE / "README.rst").read_text()
 
 
 setup(
@@ -21,7 +21,8 @@ setup(
     license='MIT',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
-        'Intended Audience :: Researchers',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         "Programming Language :: Python :: 3",
