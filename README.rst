@@ -26,9 +26,9 @@ Build & Upload Instructions
 ---------------------------
 .. code-block:: console
 
-        commit
-        bumpversion [patch, minor, major]
-        python setup.py sdist bdist_wheel
+        $ commit
+        $ bumpversion [patch, minor, major]
+        $ python setup.py sdist bdist_wheel
         $ twine upload dist/*0.1.3* (use appropriate version number)
 
 
