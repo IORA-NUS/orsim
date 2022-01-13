@@ -1,6 +1,6 @@
-=====
-orsim
-=====
+=============================================================
+ORSim: Open Source Distributed Agent Based Simulation Library
+=============================================================
 
 
 .. image:: https://img.shields.io/pypi/v/orsim.svg
@@ -10,10 +10,6 @@ orsim
         :target: https://orsim.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
-
-=====
-ORSim: Open Source Distributed Agent Based Simulation Library
-=====
 
 ORSim is born out of a development Program called OpenRoad which is a set of libraries, tools and solvers to make research on Geo-Spatial problems Accessible.
 
@@ -29,10 +25,11 @@ ORSim aims to be technology and platform Neutral even though the early versions 
 Build & Upload Instructions
 ---------------------------
 .. code-block:: console
-commit
-bumpversion [patch, minor, major]
-python setup.py sdist bdist_wheel
-$ twine upload dist/*0.1.3* (use appropriate version number)
+
+        commit
+        bumpversion [patch, minor, major]
+        python setup.py sdist bdist_wheel
+        $ twine upload dist/*0.1.3* (use appropriate version number)
 
 
 Features
