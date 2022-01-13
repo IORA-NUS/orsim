@@ -148,12 +148,6 @@ class ORSimAgent(ABC):
 
         logging.debug(f"Runtime for {self.unique_id} at {self.current_time_step}: {self.end_time - self.start_time:0.2f} secs ")
 
-
-    @abstractmethod
-    def process_payload(self, payload):
-        raise NotImplementedError
-
-
     def start_listening(self):
         start_time_for_ready = time.time() # NOTE Local start time NOT a class variable
 
@@ -252,6 +246,19 @@ class ORSimAgent(ABC):
                 self.active = False
                 self._shutdown = True
 
+    def get_transition_probability(self, condition, default):
+        try:
+            for rule in self.behavior.get('transition_prob'):
+                if rule[0] == condition:
+                    return rule[1]
+        except: pass
+
+        return default
+
+    @abstractmethod
+    def process_payload(self, payload):
+        raise NotImplementedError
+
     @abstractmethod
     def estimate_next_event_time(self):
         raise NotImplementedError
@@ -262,11 +269,3 @@ class ORSimAgent(ABC):
         '''
         raise NotImplementedError
 
-    def get_transition_probability(self, condition, default):
-        try:
-            for rule in self.behavior.get('transition_prob'):
-                if rule[0] == condition:
-                    return rule[1]
-        except: pass
-
-        return default
