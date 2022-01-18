@@ -14,7 +14,7 @@ def start_agent(project_path, module_name, agent_class_name, messenger_settings,
 
     if not project_path in sys.path:
         sys.path.append(project_path)
-    print(sys.path)
+    # print(sys.path)
     # from apps.config import messenger_backend
 
     ORSimEnv.set_backend(messenger_settings)
