@@ -28,8 +28,8 @@ Build & Upload Instructions
 
         $ commit
         $ bumpversion [patch, minor, major]
-        $ python setup.py sdist bdist_wheel
-        $ twine upload dist/*0.1.3* (use appropriate version number)
+        $ make dist
+        $ make release
 
 
 Features
