@@ -8,15 +8,21 @@ from orsim.messenger import Messenger
 from random import random
 from .orsim_env import ORSimEnv
 
+from orsim.tasks import start_agent
+
 
 class ORSimScheduler(ABC):
 
     def __init__(self, run_id, scheduler_id, orsim_settings, init_failure_handler='soft'):
+
+        if ORSimEnv.messenger_settings is None:
+            raise Exception("Please Initialize ORSimEnv.set_backend()")
+
+        self.orsim_settings = ORSimEnv.validate_orsim_settings(orsim_settings)
+
         self.run_id = run_id
         self.scheduler_id = scheduler_id
         self.time = 0
-        # self.orsim_settings = orsim_settings
-        self.orsim_settings = ORSimEnv.validate_orsim_settings(orsim_settings)
 
         self.init_failure_handler = init_failure_handler
 
@@ -34,10 +40,12 @@ class ORSimScheduler(ABC):
         logging.info(f'Starting new {scheduler_id= } for {run_id= }')
 
 
-    def add_agent(self, unique_id, method, spec):
+    # def add_agent(self, unique_id, method, spec):
+    def add_agent(self, spec, #unique_id,
+                  project_path, agent_class):
         ''' '''
-        self.agent_collection[unique_id] = {
-            'method': method,
+        self.agent_collection[spec['unique_id']] = {
+            # 'method': method,
             'spec': spec,
             # 'step_response': 'waiting'
             'step_response': {
@@ -49,12 +57,25 @@ class ORSimScheduler(ABC):
             }
         }
 
-        kwargs = spec.copy()
-        kwargs['scheduler_id'] = self.scheduler_id
-        method.delay(**kwargs) # NOTE This starts the Celery Task in a new worker thread
+        # import sys
+        # if not project_path in sys.path:
+        #     sys.path.append(project_path)
+        # print(sys.path)
 
-        logging.info(f'agent {unique_id} entering market')
-        print(f'agent {unique_id} entering market')
+        module_comp = agent_class.split('.')
+        module_name, agent_class_name = str.join('.', module_comp[:-1]), module_comp[-1]
+
+        kwargs = spec.copy()
+        # kwargs['scheduler_id'] = self.scheduler_id
+        kwargs['scheduler'] = {
+            'id': self.scheduler_id,
+            'orsim_settings': self.orsim_settings
+        }
+        # method.delay(**kwargs) # NOTE This starts the Celery Task in a new worker thread
+        start_agent.delay(project_path, module_name, agent_class_name, ORSimEnv.messenger_settings, **kwargs) # NOTE This starts the Celery Task in a new worker thread
+
+        logging.info(f"agent {spec['unique_id']} entering market")
+        print(f"agent {spec['unique_id']} entering market")
 
         # launch_start = time.time()
         # while True:
