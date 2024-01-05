@@ -2,7 +2,7 @@
 
 __author__ = """remacutetigisti"""
 __email__ = 'rajiv@nus.edu.sg'
-__version__ = '0.3.0'
+__version__ = '__version__ = '0.3.0''
 
 from orsim.core import *
 from orsim.messenger import *
