@@ -5,7 +5,7 @@ from celery import Celery
 
 from .celery_config import CeleryConfig
 
-app = Celery('OpenRoad_Agents')
+app = Celery('ORSim_Agents')
 
 app.config_from_object(CeleryConfig)
 
