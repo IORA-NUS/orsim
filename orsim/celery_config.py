@@ -9,3 +9,5 @@ class CeleryConfig:
     ## Disable result backent and also ignore results.
     task_ignore_result = True
 
+    ## to suppress broker_connection_retry_on_startup warmning
+    broker_connection_retry_on_startup = True

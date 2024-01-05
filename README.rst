@@ -29,7 +29,7 @@ Build & Upload Instructions
         $ commit
         $ bumpversion [patch, minor, major]
         $ make dist
-        $ make release
+        $ twine upload dist/*
 
 
 Features
