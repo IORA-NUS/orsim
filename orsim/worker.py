@@ -5,8 +5,9 @@ from celery import Celery
 
 from .celery_config import CeleryConfig
 
-app = Celery('OpenRoad_Agents',
-             config_from_object=CeleryConfig)
+app = Celery('OpenRoad_Agents')
+
+app.config_from_object(CeleryConfig)
 
 if __name__ == "__main__":
     app.start()
