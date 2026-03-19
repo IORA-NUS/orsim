@@ -1,7 +1,7 @@
 from abc import ABC, abstractclassmethod, abstractmethod
 import asyncio, json, logging, time, os, traceback
 from collections import OrderedDict
-import eventlet
+# NOTE IMPORTANT: Do not import eventlet at top level due to an issue of monkey patching and interaction with other libraries. Import within the function as needed.
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
