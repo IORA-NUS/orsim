@@ -1,7 +1,7 @@
 
 __author__ = """remacutetigisti"""
 __email__ = 'rajiv@nus.edu.sg'
-__version__ = '0.3.8'
+__version__ = '0.3.9'
 
 """orsim: Distributed Agent-based Simulation Library."""
 
