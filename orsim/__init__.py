@@ -7,4 +7,7 @@ __version__ = '0.3.8'
 
 from .core import ORSimEnv, ORSimAgent, ORSimScheduler
 from .messenger import Messenger
-from .utils import time_to_str, str_to_time, StateMachineSerializer
+from .utils import (time_to_str,
+                    str_to_time,
+                    StateMachineSerializer,
+                    WorkflowStateMachine)
