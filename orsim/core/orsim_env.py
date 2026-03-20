@@ -10,6 +10,8 @@ messenger_backend_settings_schema = {
 }
 
 orsim_settings_schema = {
+    'DOMAIN': {'type': 'string', 'required': True,},
+
     'SIMULATION_LENGTH_IN_STEPS': {'type': 'integer', 'required': True,},
     'STEP_INTERVAL': {'type': 'integer', 'required': True,},
 
