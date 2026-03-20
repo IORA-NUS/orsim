@@ -1,9 +1,9 @@
-"""Top-level package for orsim."""
+"""orsim: Distributed Agent-based Simulation Library."""
 
-__author__ = """remacutetigisti"""
-__email__ = 'rajiv@nus.edu.sg'
-__version__ = '0.3.7'
+__author__ = "remacutetigisti"
+__email__ = "rajiv@nus.edu.sg"
+__version__ = "0.3.7"
 
-from orsim.core import *
-from orsim.messenger import *
-from orsim.utils import *
+from .core import ORSimEnv, ORSimAgent, ORSimScheduler
+from .messenger import Messenger
+from .utils import time_to_str, str_to_time, StateMachineSerializer
