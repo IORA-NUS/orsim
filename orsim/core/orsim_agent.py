@@ -123,7 +123,7 @@ class ORSimAgent(ABC):
         self.prev_time_step = 0
         self.current_time_step = 0
         self.elapsed_duration_steps = 0
-        self.active = False
+        self._active = False
 
         self._shutdown = False
         self.behavior = behavior
@@ -143,6 +143,14 @@ class ORSimAgent(ABC):
 
         self.register_message_handler(topic=f"{self.run_id}/{self.scheduler_id}/ORSimAgent",
                                  method=self.handle_orsim_agent_message)
+
+    @property
+    def active(self):
+        return self._active
+
+    @active.setter
+    def active(self, value):
+        self._active = value
 
     def register_message_handler(self, topic, method):
         """
