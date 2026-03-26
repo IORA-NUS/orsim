@@ -12,7 +12,7 @@ setup(
     name='orsim',
     # packages=find_packages(include=['orsim'], ),
     packages=find_packages(),
-    version='1.0.6',
+    version='1.0.7',
     description='Distributed Agent based Simulation Library',
     url='https://github.com/IORA-NUS/orsim',
     long_description=README,
