@@ -436,6 +436,20 @@ class ORSimAgent(ABC):
 
         return default
 
+
+    def get_transition_probability(self, condition, default):
+        try:
+            for rule in self.behavior.get('transition_prob'):
+                if rule[0] == condition:
+                    return rule[1]
+        except: pass
+
+        return default
+
+    def get_behavior_detail(self, key):
+        return self.behavior.get(key, None)
+
+
     @abstractmethod
     def process_payload(self, payload):
         raise NotImplementedError

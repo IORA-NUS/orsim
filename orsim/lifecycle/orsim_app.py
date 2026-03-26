@@ -55,7 +55,7 @@ class ORSimApp(ABC):
         if self.manager and hasattr(self.manager, "get_id"):
             try:
                 self.topic_params = {
-                    f"{self.run_id}/{self.manager.get_id()}": self.message_handler
+                    f"{self.run_id}/{self.manager.get_id()}": self.handle_app_topic_messages
                 }
             except Exception as e:
                 logging.warning(f"Failed to set topic_params: {str(e)}")
@@ -97,9 +97,9 @@ class ORSimApp(ABC):
         self.latest_sim_clock = sim_clock
         self.latest_loc = current_loc
 
-    def message_handler(self, *args, **kwargs) -> None:
-        """Default message handler. Subclasses should override."""
-        raise NotImplementedError("Subclasses must implement message_handler.")
+    def handle_app_topic_messages(self, *args, **kwargs) -> None:
+        """Default message handler for app topic messages. Subclasses should override."""
+        raise NotImplementedError("Subclasses must implement handle_app_topic_messages.")
 
     def enqueue_message(self, payload: Any) -> None:
         """Add a message to the end of the queue."""
