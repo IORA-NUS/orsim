@@ -2,10 +2,12 @@ from typing import Any, Dict
 from orsim.messenger import Messenger
 import logging
 
-
-
 from abc import ABC, abstractmethod
 from typing import Optional, List
+
+class HandlerValidationException(Exception):
+    pass
+
 
 class ORSimApp(ABC):
     """
@@ -64,6 +66,75 @@ class ORSimApp(ABC):
         self.exited_market: bool = False
         self.latest_sim_clock: Optional[str] = None
         self.latest_loc: Optional[Any] = None
+
+        if not hasattr(self, 'managed_statemachine'):
+            raise NotImplementedError("Subclasses must define managed_statemachine")
+        if not hasattr(self, 'interaction_ground_truth_list'):
+            raise NotImplementedError("Subclasses must define interaction_ground_truth_list")
+
+        self.validate_message_handlers()
+
+
+    def validate_message_handlers(self):
+        """
+        Validates that all required @message_handler methods for this app's statemachine are implemented.
+        Raises HandlerValidationException if any handler is missing.
+        More robust: handles missing/empty ground truth, missing attributes, and type errors.
+        """
+        if not getattr(self, 'managed_statemachine', None):
+            return
+
+        managed_name = getattr(self.managed_statemachine, '__name__', None)
+        if not managed_name:
+            raise HandlerValidationException("managed_statemachine must have a __name__ attribute.")
+
+        ground_truth_list = getattr(self, 'interaction_ground_truth_list', None)
+        if not ground_truth_list:
+            return
+
+        missing = []
+        for ground_truth in ground_truth_list:
+            if not isinstance(ground_truth, list):
+                continue
+            for entry in ground_truth:
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get('target_statemachine') == managed_name:
+                    action = entry.get('action')
+                    event = entry.get('event')
+                    if not action or not event:
+                        continue
+                    found = False
+                    for attr in dir(self):
+                        fn = getattr(self, attr, None)
+                        if hasattr(fn, '_agentcore_message_handler'):
+                            try:
+                                handler_action, handler_event = fn._agentcore_message_handler
+                            except Exception:
+                                continue
+                            if handler_action == action and handler_event == event:
+                                found = True
+                                break
+                    if not found:
+                        missing.append((action, event, entry.get('description', '')))
+
+        if missing:
+            msg = "Missing message handlers:\n" + "\n".join(
+                f"  action={a}, event={e}, desc={d}" for a, e, d in missing
+            )
+            raise HandlerValidationException(msg)
+
+    @property
+    @abstractmethod
+    def managed_statemachine(self):
+        """Subclasses must declare the managed statemachine (or None)."""
+        pass
+
+    @property
+    @abstractmethod
+    def interaction_ground_truth_list(self):
+        """Subclasses must declare the ground truth list (can be empty)."""
+        pass
 
     @abstractmethod
     def create_user(self) -> Any:
