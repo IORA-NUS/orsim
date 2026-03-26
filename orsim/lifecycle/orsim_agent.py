@@ -161,12 +161,13 @@ class ORSimAgent(ABC):
     def validate_behavior(self, schema=None):
         """
         Validate self.behavior against the provided schema (defaults to AGENT_BEHAVIOR_SCHEMA).
-        Raises ValueError if validation fails.
+        Uses allow_unknown=True so extra fields are permitted (for subclass/runtime extension).
+        Raises ValueError if validation fails for required/typed fields in the schema.
         Subclasses can call this with an expanded schema.
         """
         if schema is None:
             schema = AGENT_BEHAVIOR_SCHEMA
-        validator = Validator(schema)
+        validator = Validator(schema, allow_unknown=True)
         if not validator.validate(self.behavior):
             raise ValueError(f"Invalid agent behavior: {validator.errors}")
 
