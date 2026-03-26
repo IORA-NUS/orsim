@@ -68,12 +68,13 @@ class ORSimApp(ABC):
     @abstractmethod
     def create_user(self) -> Any:
         """Create and return the user object. Must be implemented by subclass."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def create_manager(self) -> Any:
         """Create and return the manager object. Must be implemented by subclass."""
-        pass
+        raise NotImplementedError
+
 
     def launch(self, sim_clock: str, **kwargs) -> None:
         """Launch the app and login the manager."""
@@ -97,9 +98,10 @@ class ORSimApp(ABC):
         self.latest_sim_clock = sim_clock
         self.latest_loc = current_loc
 
+    @abstractmethod
     def handle_app_topic_messages(self, *args, **kwargs) -> None:
         """Default message handler for app topic messages. Subclasses should override."""
-        raise NotImplementedError("Subclasses must implement handle_app_topic_messages.")
+        raise NotImplementedError
 
     def enqueue_message(self, payload: Any) -> None:
         """Add a message to the end of the queue."""

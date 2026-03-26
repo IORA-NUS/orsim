@@ -126,14 +126,15 @@ class ORSimManager(ABC):
     @abstractmethod
     def resource_get(self, resource_id, params=None, timeout=None):
         """GET a resource or collection from the backend. Uses self.persona. Must be implemented."""
-        pass
+        raise NotImplementedError
+
 
     @abstractmethod
     def resource_post(self, data, timeout=None):
         """POST a resource to the backend. Uses self.persona. Must be implemented."""
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def resource_patch(self, resource_id, data, etag=None, timeout=None):
         """PATCH a resource in the backend. Uses self.persona. Must be implemented."""
-        pass
+        raise NotImplementedError
