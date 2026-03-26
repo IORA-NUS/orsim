@@ -4,6 +4,7 @@ import logging
 
 from abc import ABC, abstractmethod
 from typing import Optional, List
+from cerberus import Validator
 
 class HandlerValidationException(Exception):
     pass
@@ -18,7 +19,7 @@ class ORSimApp(ABC):
     sim_clock: str
     credentials: Dict[str, Any]
     messenger: Optional[Messenger]
-    persona: Optional[Any]
+    behavior: Dict[str, Any]
     user: Any
     manager: Any
     topic_params: dict
@@ -27,25 +28,25 @@ class ORSimApp(ABC):
     latest_sim_clock: Optional[str]
     latest_loc: Optional[Any]
 
-    def __init__(self, run_id: str, sim_clock: str, credentials: Dict[str, Any], messenger: Optional[Messenger]=None, persona: Optional[Any]=None, **kwargs):
+
+    def __init__(self, run_id: str, sim_clock: str, behavior: Dict[str, Any], messenger: Optional[Messenger]=None, **kwargs):
         """
         Initialize the base app.
         Args:
             run_id: Unique run identifier
             sim_clock: Simulation clock time
-            credentials: Auth credentials dict
+            behavior: Behavior configuration dict
             messenger: Messaging interface (optional)
-            persona: Persona information (optional)
             kwargs: Additional fields for subclass customization
         """
         self.run_id = run_id
         self.sim_clock = sim_clock
-        self.credentials = credentials
+        self.behavior = behavior
+        self.credentials = self.extract_credentials(behavior)
         if messenger is not None:
             if Messenger is None or not isinstance(messenger, Messenger):
                 raise TypeError("messenger must be an instance of orsim.messenger.Messenger")
         self.messenger = messenger
-        self.persona = persona
 
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -73,7 +74,35 @@ class ORSimApp(ABC):
             raise NotImplementedError("Subclasses must define interaction_ground_truth_list")
 
         self.validate_message_handlers()
+        self.validate_behavior()
 
+    def extract_credentials(self, behavior: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract credentials from the behavior dict."""
+        creds = {}
+        for key in ['email', 'password']:
+            if key in behavior:
+                creds[key] = behavior[key]
+        return creds
+
+
+    def validate_behavior(self, schema=None):
+        """
+        Validate self.behavior against the provided schema (defaults to self.behavior_schema).
+        Uses allow_unknown=True so extra fields are permitted (for subclass/runtime extension).
+        Raises ValueError if validation fails for required/typed fields in the schema.
+        Subclasses can call this with an expanded schema.
+        """
+        if schema is None:
+            schema = self.runtime_behavior_schema
+        validator = Validator(schema, allow_unknown=True)
+        if not validator.validate(self.behavior):
+            raise ValueError(f"Invalid agent behavior: {validator.errors}")
+
+    @property
+    @abstractmethod
+    def runtime_behavior_schema(self) -> Dict[str, Any]:
+        """Subclasses must provide the runtime behavior schema for validation."""
+        pass
 
     def validate_message_handlers(self):
         """

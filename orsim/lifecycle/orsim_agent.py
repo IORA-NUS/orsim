@@ -157,7 +157,6 @@ class ORSimAgent(ABC):
     def active(self, value):
         self._active = value
 
-
     def validate_behavior(self, schema=None):
         """
         Validate self.behavior against the provided schema (defaults to AGENT_BEHAVIOR_SCHEMA).
