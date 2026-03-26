@@ -40,6 +40,7 @@ Date: 2026-03-21
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Protocol, Tuple
 from collections import defaultdict
+import logging
 
 def message_handler(action: str, event: str):
     """Decorator to mark a method as a message handler for (action, event)."""
@@ -110,8 +111,7 @@ class InteractionCallbackRouter:
             try:
                 callback(**context)
             except Exception as e:
-                # Log or handle callback error
-                pass
+                logging.error(f"Error in message handler for ({action}, {event}): {e}", exc_info=True)
         return len(handlers) > 0
 
     def dispatch_state(self, state: str, **context) -> bool:
@@ -120,8 +120,7 @@ class InteractionCallbackRouter:
             try:
                 callback(**context)
             except Exception as e:
-                # Log or handle callback error
-                pass
+                logging.error(f"Error in state handler for state '{state}': {e}", exc_info=True)
         return len(handlers) > 0
 
 class CallbackRouterPlugin:
@@ -156,6 +155,7 @@ class CallbackRouterPlugin:
                 state = fn._agentcore_state_handler
                 self.register_state(state, fn)
 
+
     def on_message(self, ctx: InteractionContext) -> bool:
         """
         Dispatch a message event to registered handlers.
@@ -173,7 +173,7 @@ class CallbackRouterPlugin:
                 **extra,
             )
         except Exception as e:
-            # Optionally log or handle error
+            logging.error(f"Error dispatching message event ({ctx.action}, {ctx.event}): {e}", exc_info=True)
             return False
 
     def on_state(self, ctx: InteractionContext) -> bool:
@@ -187,5 +187,5 @@ class CallbackRouterPlugin:
         try:
             return self.router.dispatch_state(state=ctx.state, **extra)
         except Exception as e:
-            # Optionally log or handle error
+            logging.error(f"Error dispatching state event '{ctx.state}': {e}", exc_info=True)
             return False
