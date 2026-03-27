@@ -51,8 +51,8 @@ class ORSimApp(ABC):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-        self.user = self.create_user()
-        self.manager = self.create_manager()
+        self.user = self._create_user()
+        self.manager = self._create_manager()
 
         self.topic_params = {}
         if self.manager and hasattr(self.manager, "get_id"):
@@ -166,12 +166,12 @@ class ORSimApp(ABC):
         pass
 
     @abstractmethod
-    def create_user(self) -> Any:
+    def _create_user(self) -> Any:
         """Create and return the user object. Must be implemented by subclass."""
         raise NotImplementedError
 
     @abstractmethod
-    def create_manager(self) -> Any:
+    def _create_manager(self) -> Any:
         """Create and return the manager object. Must be implemented by subclass."""
         raise NotImplementedError
 
@@ -193,10 +193,15 @@ class ORSimApp(ABC):
             except Exception as e:
                 logging.warning(f"Failed to logout {self.get_manager()}: {str(e)}")
 
-    def update_current(self, sim_clock: str, current_loc: Any) -> None:
+    # def update_current(self, sim_clock: str, current_loc: Any) -> None:
+    #     """Update the latest simulation clock and location."""
+    #     self.latest_sim_clock = sim_clock
+    #     self.latest_loc = current_loc
+    def update_current(self, sim_clock: str) -> None:
         """Update the latest simulation clock and location."""
         self.latest_sim_clock = sim_clock
-        self.latest_loc = current_loc
+        if hasattr(self, 'current_loc'):
+            self.latest_loc = self.current_loc
 
     @abstractmethod
     def handle_app_topic_messages(self, *args, **kwargs) -> None:

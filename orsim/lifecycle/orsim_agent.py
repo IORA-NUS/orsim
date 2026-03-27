@@ -13,6 +13,8 @@ from orsim.core.orsim_env import ORSimEnv
 from orsim.utils import time_to_str, str_to_time
 
 from cerberus import Validator
+from typing import Any, Dict
+
 
 class ORSimAgent(ABC):
     """
@@ -74,7 +76,7 @@ class ORSimAgent(ABC):
     step_log = {}
 
     # def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler_id, behavior, orsim_settings):
-    def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler, behavior):
+    def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler, behavior, datahub_dir=None):
         """
         Initialize an ORSimAgent instance.
 
@@ -117,8 +119,12 @@ class ORSimAgent(ABC):
         self.reference_time = datetime.strptime(reference_time, '%Y%m%d%H%M%S') # datetime
         self.current_time = self.reference_time
         self.next_event_time = self.reference_time # To be set by agent at every step_response
+        self.datahub_dir = datahub_dir
         # self.orsim_settings = orsim_settings
         self.orsim_settings = ORSimEnv.validate_orsim_settings(scheduler['orsim_settings'])
+
+        self.failure_count = 0
+        self.failure_log = {}
 
 
 
@@ -149,9 +155,30 @@ class ORSimAgent(ABC):
         self.register_message_handler(topic=f"{self.run_id}/{self.scheduler_id}/ORSimAgent",
                                  method=self.handle_orsim_agent_message)
 
+        try:
+            self.app = self._create_app()
+            if hasattr(self.app, "topic_params") and self.app.topic_params is not None:
+                    for topic, method in self.app.topic_params.items():
+                        self.register_message_handler(topic=topic, method=method)
+        except Exception as e:
+            self.agent_failed = True
+            logging.exception(f"Failed to launch app for {self.unique_id = }: {str(e)}")
+
+
+    @abstractmethod
+    def _create_app(self):
+        ''' Subclasses should implement this method to create their specific app instance.
+        This method is called during initialization to set up the agent's application logic.
+        '''
+        raise NotImplementedError
+
     @property
     def active(self):
         return self._active
+
+    @property
+    def step_size(self):
+        return self.orsim_settings['STEP_INTERVAL']
 
     @active.setter
     def active(self, value):
@@ -298,6 +325,80 @@ class ORSimAgent(ABC):
 
         self.end_time = time.time()
         self.message_processing_active = False
+
+    def process_payload(self, payload: Dict[str, Any]) -> bool:
+        did_step: bool = False
+        try:
+            if not isinstance(payload, dict):
+                raise ValueError(f"Payload is not a dict: {payload}")
+            action = payload.get("action")
+            allow_payload_processing = False
+            if self.process_payload_on_init and (action == "init"):
+                allow_payload_processing = True
+            elif action == "step":
+                allow_payload_processing = True
+
+            if allow_payload_processing:
+                try:
+                    self.add_step_log("Before entering_market")
+                    self.entering_market(payload.get("time_step"))
+                    self.add_step_log("After entering_market")
+                except Exception as e:
+                    logging.error(f"Exception in entering_market: {str(e)}")
+                    self.failure_log[self.failure_count] = traceback.format_exc()
+                    self.failure_count += 1
+                    return False
+                if self.active:
+                    try:
+                        self.add_step_log("Before step")
+                        did_step = self.step(payload.get("time_step"))
+                        self.add_step_log("After step")
+                        self.failure_count = 0
+                        self.failure_log = {}
+                    except Exception as e:
+                        logging.error(f"Exception in step for Agent {self.unique_id}: {str(e)}")
+                        self.failure_log[self.failure_count] = traceback.format_exc()
+                        self.failure_count += 1
+                        return False
+                else:
+                    logging.info(f"Agent[{self.unique_id}]: Agent is not active, skipping step.")
+
+                try:
+                    self.add_step_log("Before exiting_market")
+                    self.exiting_market()
+                    self.add_step_log("After exiting_market")
+                except Exception as e:
+                    logging.error(f"Exception in exiting_market: {str(e)}")
+                    self.failure_log[self.failure_count] = traceback.format_exc()
+                    self.failure_count += 1
+                    return False
+            else:
+                logging.warning(f"allow_payload_processing={allow_payload_processing}. Agent {self.unique_id} received unsupported action: {action}. Payload: {payload}")
+        except Exception as e:
+            logging.error(f"Exception in process_payload: {str(e)}")
+            self.failure_log[self.failure_count] = traceback.format_exc()
+            self.failure_count += 1
+            return False
+
+        return did_step
+
+    @property
+    @abstractmethod
+    def process_payload_on_init(self):
+        return True
+
+    @abstractmethod
+    def entering_market(self, time_step):
+        raise NotImplementedError("Subclasses must implement entering_market method and set self.active = True when they want to start processing steps.")
+
+    @abstractmethod
+    def step(self, time_step):
+        raise NotImplementedError("Subclasses must implement step method to define the agent's behavior during each time step.")
+
+    @abstractmethod
+    def exiting_market(self):
+        raise NotImplementedError("Subclasses must implement exiting_market method and set self.active = False when they want to stop processing steps.")
+
 
     def on_receive_message(self, client, userdata, message):
         """
@@ -458,9 +559,9 @@ class ORSimAgent(ABC):
         return self.behavior.get(key, None)
 
 
-    @abstractmethod
-    def process_payload(self, payload):
-        raise NotImplementedError
+    # @abstractmethod
+    # def process_payload(self, payload):
+    #     raise NotImplementedError
 
     @abstractmethod
     def estimate_next_event_time(self):
