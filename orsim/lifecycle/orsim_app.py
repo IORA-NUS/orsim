@@ -193,6 +193,15 @@ class ORSimApp(ABC):
             except Exception as e:
                 logging.warning(f"Failed to logout {self.get_manager()}: {str(e)}")
 
+    def get_transition_probability(self, condition, default):
+        try:
+            for rule in self.behavior.get('profile', {}).get('transition_prob'):
+                if rule[0] == condition:
+                    return rule[1]
+        except: pass
+
+        return default
+
     # def update_current(self, sim_clock: str, current_loc: Any) -> None:
     #     """Update the latest simulation clock and location."""
     #     self.latest_sim_clock = sim_clock

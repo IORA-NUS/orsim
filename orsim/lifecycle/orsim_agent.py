@@ -547,8 +547,9 @@ class ORSimAgent(ABC):
                 self._shutdown = True
 
     def get_transition_probability(self, condition, default):
+        logging.warning(f"ORSimAgent.get_transition_probability is Deprecated. Please use the ORSimApp.get_transition_probability method instead.")
         try:
-            for rule in self.behavior.get('transition_prob'):
+            for rule in self.behavior.get('profile', {}).get('transition_prob'):
                 if rule[0] == condition:
                     return rule[1]
         except: pass
