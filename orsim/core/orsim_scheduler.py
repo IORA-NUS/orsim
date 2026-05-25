@@ -306,19 +306,15 @@ class ORSimScheduler(ABC):
 
             await self._response_event.wait()
 
-    async def step(self):
+    async def step(self, is_final: bool = False):
         """
         Advances the simulation by one step, coordinating agent actions and handling timeouts.
 
-        This asynchronous method performs the following:
-        - Logs the current step and scheduler information.
-        - Determines whether to send a 'step' or 'shutdown' message to agents based on simulation progress.
-        - Initializes agent step responses for the current time step.
-        - Publishes the step/shutdown message to all agents.
-        - Awaits confirmation responses from agents, handling timeouts if necessary.
-        - Removes agents that have shut down or are still waiting after the step.
-        - Increments the simulation time.
-        - Returns a dictionary indicating the status of the simulation and whether it has ended.
+        Args:
+            is_final: When True, sends action='shutdown' to agents instead of action='step'.
+                      Determined externally by the TerminationCondition so the scheduler does
+                      not need to know the total simulation length.  Defaults to False for
+                      backward compatibility with callers that do not supply a runtime.
 
         Returns:
             dict: A dictionary with keys 'status' (str) and 'end_sim' (bool) indicating the result of the step.
@@ -336,7 +332,12 @@ class ORSimScheduler(ABC):
 
         self._response_event.clear()
 
-        if self.time == self.orsim_settings['SIMULATION_LENGTH_IN_STEPS']-1:
+        # Fallback: honour SIMULATION_LENGTH_IN_STEPS if the caller did not set is_final.
+        # This preserves backward compatibility when step() is called without ORSimRuntime.
+        if not is_final and self.time == self.orsim_settings['SIMULATION_LENGTH_IN_STEPS'] - 1:
+            is_final = True
+
+        if is_final:
             message = {'action': 'shutdown', 'time_step': self.time}
         else:
             message = {'action': 'step', 'time_step': self.time}
@@ -375,11 +376,8 @@ class ORSimScheduler(ABC):
 
         sim_stat = {
             'status': 'success',
-            'end_sim': False,
+            'end_sim': is_final,
         }
-
-        if self.time == self.orsim_settings['SIMULATION_LENGTH_IN_STEPS']-1:
-            sim_stat['end_sim'] = True
 
 
         logging.info(f'{self.scheduler_id} Runtime: {(time.time()-start_time):0.2f} sec')
