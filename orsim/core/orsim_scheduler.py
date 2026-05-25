@@ -100,6 +100,11 @@ class ORSimScheduler(ABC):
 
         self.agent_messenger = Messenger(ORSimEnv.messenger_settings, self.agent_credentials, f"{self.run_id}/{self.scheduler_id}/ORSimScheduler", self.on_receive_message)
 
+        # Initialised lazily inside the first async step() call so they belong
+        # to the running event loop rather than whatever loop exists at __init__ time.
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._response_event: asyncio.Event | None = None
+
         self.pp = pprint.PrettyPrinter(indent=2)
         logging.info(f'Starting new {scheduler_id= } for {run_id= }')
 
@@ -233,70 +238,73 @@ class ORSimScheduler(ABC):
             if (payload.get('action') == 'error') or (response_time_step is None):
                 logging.warning(f'{self.__class__.__name__} received {message.payload = }')
 
+            if self._loop is not None:
+                self._loop.call_soon_threadsafe(self._response_event.set)
+
+    def _update_agent_stat(self) -> int:
+        """
+        Tallies current step responses into self.agent_stat and returns the waiting count.
+        """
+        completed = ready = shutdown = error = waiting = num_did_step = 0
+        for agent_id in self.agent_collection:
+            response = self.agent_collection[agent_id]['step_response'][self.time]
+            reaction = response['reaction']
+            if reaction == 'completed':
+                completed += 1
+            elif reaction == 'ready':
+                ready += 1
+            elif reaction == 'error':
+                error += 1
+            elif reaction == 'shutdown':
+                shutdown += 1
+            elif reaction == 'waiting':
+                waiting += 1
+            if response['did_step']:
+                num_did_step += 1
+
+        self.agent_stat[self.time] = {
+            'completed': completed,
+            'ready': ready,
+            'error': error,
+            'shutdown': shutdown,
+            'waiting': waiting,
+            'stepping_agents': num_did_step,
+            'total_agents': len(self.agent_collection),
+        }
+        return waiting
+
     async def confirm_responses(self):
         """
-        Monitors and confirms the responses from agents in the agent_collection for the current simulation time step.
+        Waits for all agents to respond for the current time step.
 
-        Iterates through all agents, categorizes their responses (completed, ready, error, shutdown, waiting), and updates
-        agent statistics accordingly. Periodically logs the current status if waiting for agent responses takes longer than 5 seconds.
-        Sleeps briefly between checks to avoid busy-waiting.
+        Wakes only when on_receive_message signals _response_event, so there is
+        no fixed-interval polling.  A double-check after clearing the event closes
+        the race window where a response arrives between the count and the clear.
 
         Updates:
             - self.agent_stat[self.time]: Dictionary containing counts of agent response types and other statistics.
-
-        Returns:
-            None
         """
-
         start_time = time.time()
-        base = 0
-        completed = 0
-        ready = 0
-        shutdown = 0
-        error = 0
-        waiting = len(self.agent_collection)
+        log_base = 0
 
-        while waiting > 0:
-            completed = 0
-            ready = 0
-            shutdown = 0
-            error = 0
-            waiting = 0
-            num_did_step = 0
-            for agent_id, _ in self.agent_collection.items():
-                response = self.agent_collection[agent_id]['step_response'][self.time]
-                if (response['reaction'] == 'completed'):
-                    completed += 1
-                elif (response['reaction'] == 'ready'):
-                    ready += 1
-                elif (response['reaction'] == 'error'):
-                    error += 1
-                elif (response['reaction'] == 'shutdown'):
-                    shutdown += 1
-                elif (response['reaction'] == 'waiting'):
-                    waiting += 1
+        while True:
+            waiting = self._update_agent_stat()
+            if waiting == 0:
+                break
 
-                if response['did_step']:
-                    num_did_step += 1
+            elapsed = time.time() - start_time
+            if elapsed >= 5:
+                logging.info(f"Waiting for Agent Response... {self.agent_stat[self.time]}: {log_base + elapsed:0.0f} sec")
+                log_base += elapsed
+                start_time = time.time()
 
-            self.agent_stat[self.time] = {
-                'completed': completed,
-                'ready': ready,
-                'error': error,
-                'shutdown': shutdown,
-                'waiting': waiting,
-                'stepping_agents': num_did_step,
-                'total_agents': len(self.agent_collection),
-                # 'run_time_dist': []
-            }
-            current_time = time.time()
-            if current_time - start_time >= 5:
-                # logging.info(f"Waiting for Agent Response... {completed=}, {error=}, {shutdown=}, {waiting=} of {len(self.agent_collection)}: {base + (current_time - start_time):0.0f} sec")
-                logging.info(f"Waiting for Agent Response... {self.agent_stat[self.time]}: {base + (current_time - start_time):0.0f} sec")
-                base = base + (current_time - start_time)
-                start_time = current_time
+            self._response_event.clear()
+            # Recount after clearing: a response that arrived between the
+            # earlier count and the clear would otherwise be missed.
+            if self._update_agent_stat() == 0:
+                break
 
-            await asyncio.sleep(0.1)
+            await self._response_event.wait()
 
     async def step(self):
         """
@@ -319,8 +327,14 @@ class ORSimScheduler(ABC):
             asyncio.TimeoutError: If agent responses are not received within the configured timeout.
         """
 
+        if self._loop is None:
+            self._loop = asyncio.get_running_loop()
+            self._response_event = asyncio.Event()
+
         logging.info(f"{self.scheduler_id} Step: {self.time}")
         start_time = time.time()
+
+        self._response_event.clear()
 
         if self.time == self.orsim_settings['SIMULATION_LENGTH_IN_STEPS']-1:
             message = {'action': 'shutdown', 'time_step': self.time}
