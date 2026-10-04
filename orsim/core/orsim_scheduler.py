@@ -28,8 +28,39 @@ class ORSimScheduler(ABC):
         pp (PrettyPrinter): Pretty printer for logging and debugging.
 
     Methods:
-        __init__(run_id, scheduler_id, orsim_settings, init_failure_handler='soft'):
+        __init__(run_id, scheduler_id, orsim_settings, init_failure_handler='soft', transport=None):
             Initializes the scheduler, validates settings, and sets up messaging.
+
+    Transport limitation (phase 1) -- IN-PROCESS ONLY, and not reachable from
+    OpenRide today:
+        The optional ``transport`` is used for THIS scheduler's own messenger, and
+        for nothing else. Two separate limits apply, and BOTH must be lifted before
+        a real run can use a non-paho transport.
+
+        1. **Agents never see it.** :meth:`add_agent` launches them through
+           ``start_agent.delay(project_path, module_name, agent_class_name,
+           ORSimEnv.messenger_settings, **kwargs)``, a JSON-serialised Celery task,
+           and a transport OBJECT cannot cross that boundary. Agents booted through
+           Celery -- i.e. every agent in a real run -- therefore always receive
+           ``transport=None`` and build a ``PahoTransport``. Making this live
+           requires a transport NAME/factory resolved inside the worker from
+           ``messenger_settings``, not an instance.
+
+        2. **No scheduler that actually runs accepts it yet.** OpenRide does not
+           instantiate ``ORSimScheduler`` directly; it instantiates the app-side
+           subclass ``apps/simulation/openride_scheduler.py::OpenRideScheduler``,
+           whose ``__init__`` signature is ``(run_id, scheduler_id, orsim_settings,
+           init_failure_handler='soft')`` -- it neither accepts ``transport`` nor
+           forwards one to ``super().__init__``. Passing ``transport=`` to it raises
+           ``TypeError``. So in the OpenRide deployment this parameter is
+           unreachable for the SCHEDULER too, not just for agents.
+
+        The ``transport=`` thread is therefore exercisable in-process only (this
+        repo's tests, embedded runs that construct ``ORSimScheduler`` themselves).
+        Making it reachable in OpenRide means adding the parameter to
+        ``OpenRideScheduler.__init__`` and forwarding it -- an edit to
+        ``openride_apps``, which phase 1 deliberately does not touch and a later
+        phase is allowed to make.
 
         add_agent(spec, project_path, agent_class):
             Adds a new agent to the scheduler, launches it asynchronously, and tracks its state.
@@ -53,7 +84,7 @@ class ORSimScheduler(ABC):
         Exception: If ORSimEnv is not properly initialized or agent launch fails beyond allowed tolerance.
     """
 
-    def __init__(self, run_id, scheduler_id, orsim_settings, init_failure_handler='soft'):
+    def __init__(self, run_id, scheduler_id, orsim_settings, init_failure_handler='soft', transport=None):
         """
         Initialize an ORSimScheduler instance.
 
@@ -62,6 +93,10 @@ class ORSimScheduler(ABC):
             scheduler_id (str): Unique identifier for the scheduler.
             orsim_settings (dict): Configuration settings for ORSim.
             init_failure_handler (str, optional): Handler for initialization failure. Defaults to 'soft'.
+            transport (MessengerTransport, optional): Transport for this scheduler's
+                own messenger. Defaults to None, which builds the usual PahoTransport.
+                It is NOT propagated to agents -- see the class docstring's
+                "Transport limitation (phase 1)".
 
         Raises:
             Exception: If ORSimEnv.messenger_settings is not initialized.
@@ -98,7 +133,7 @@ class ORSimScheduler(ABC):
             'password': "secret_password",
         }
 
-        self.agent_messenger = Messenger(ORSimEnv.messenger_settings, self.agent_credentials, f"{self.run_id}/{self.scheduler_id}/ORSimScheduler", self.on_receive_message)
+        self.agent_messenger = Messenger(ORSimEnv.messenger_settings, self.agent_credentials, f"{self.run_id}/{self.scheduler_id}/ORSimScheduler", self.on_receive_message, transport=transport)
 
         # Initialised lazily inside the first async step() call so they belong
         # to the running event loop rather than whatever loop exists at __init__ time.
@@ -156,6 +191,11 @@ class ORSimScheduler(ABC):
             'orsim_settings': self.orsim_settings
         }
         # method.delay(**kwargs) # NOTE This starts the Celery Task in a new worker thread
+        # NOTE (transport abstraction, phase 1): this is a JSON-serialised Celery task,
+        # so a transport OBJECT cannot be forwarded here -- agents launched this way
+        # always construct their Messenger with transport=None and thus a PahoTransport.
+        # A future phase must pass a transport NAME/factory resolved inside the worker
+        # from ORSimEnv.messenger_settings. The transport= thread is in-process only.
         start_agent.delay(project_path, module_name, agent_class_name, ORSimEnv.messenger_settings, **kwargs) # NOTE This starts the Celery Task in a new worker thread
 
         logging.info(f"agent {spec['unique_id']} entering market")

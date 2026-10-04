@@ -1,4 +1,7 @@
-from orsim.core import ORSimAgent, ORSimEnv
+import pytest
+
+from orsim.core import ORSimEnv
+from orsim.lifecycle import ORSimAgent
 from datetime import datetime
 
 orsim_settings = {
@@ -42,6 +45,7 @@ class DummyAgent(ORSimAgent):
 
 
 
+@pytest.mark.skip(reason="requires a live RabbitMQ/MQTT broker; superseded by tests/test_transport_wiring.py")
 def test_orsim_agent_():
 
     ORSimEnv.set_backend(messenger_backend)

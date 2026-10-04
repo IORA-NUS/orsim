@@ -76,7 +76,7 @@ class ORSimAgent(ABC):
     step_log = {}
 
     # def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler_id, behavior, orsim_settings):
-    def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler, behavior, datahub_dir=None):
+    def __init__(self, unique_id, run_id, reference_time, init_time_step, scheduler, behavior, datahub_dir=None, transport=None):
         """
         Initialize an ORSimAgent instance.
 
@@ -87,6 +87,14 @@ class ORSimAgent(ABC):
             init_time_step (int): Initial time step for the agent.
             scheduler (dict): Scheduler configuration containing 'id' and 'orsim_settings'.
             behavior (Any): Behavior configuration for the agent.
+            transport (MessengerTransport, optional): Transport handed to this agent's
+                Messenger. Defaults to None, which builds the usual PahoTransport --
+                i.e. unchanged behaviour. NOTE: a transport INSTANCE cannot cross the
+                Celery boundary, because ORSimScheduler.add_agent launches agents via
+                the JSON-serialised task start_agent.delay(...). Agents booted through
+                Celery -- which is every agent in a real run -- therefore always
+                receive transport=None. This parameter is exercisable in-process only
+                (tests, embedded runs); see the note in ORSimScheduler.
 
         Attributes:
             unique_id (str): Unique identifier for the agent.
@@ -144,7 +152,10 @@ class ORSimAgent(ABC):
             'password': "secret_password",
         }
 
-        self.messenger = Messenger(ORSimEnv.messenger_settings, self.agent_credentials)
+        # transport= is passed by KEYWORD: positionally it would land in channel_id.
+        # channel_id / on_message stay unspecified so the agent messenger subscribes to
+        # nothing at construction and subscribes later in start_listening().
+        self.messenger = Messenger(ORSimEnv.messenger_settings, self.agent_credentials, transport=transport)
 
         self.start_time = time.time()
         self.message_processing_active = False

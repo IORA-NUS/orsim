@@ -7,7 +7,7 @@ __version__ = '1.3.0'
 
 from .core import ORSimEnv, ORSimScheduler
 from .lifecycle import ORSimAgent, ORSimApp, ORSimManager
-from .messenger import Messenger
+from .messenger import Messenger, MessengerTransport, PahoTransport
 from .utils import (time_to_str,
                     str_to_time,
                     StateMachineSerializer,
